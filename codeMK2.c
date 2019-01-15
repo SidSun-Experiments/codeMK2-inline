@@ -29,6 +29,7 @@ int upgrade(char *argv[],char versionNumber[]);
 int main(int argc, char *argv[]) {
     char version[]="v1.4.2";
     if (argc >= 5) {
+//        printf("5 or less arg provided.");
         if (!strcmp(argv[1], "-e") || !strcmp(argv[1], "--encode") || !strcmp(argv[1], "-encode")) {
             encode(argv);
         } else if (!strcmp(argv[1], "-d") || !strcmp(argv[1], "--decode") || !strcmp(argv[1], "-decode")) {
@@ -52,7 +53,7 @@ int main(int argc, char *argv[]) {
 
 int upgrade(char *argv[],char versionNumber[]){
     char command[300];
-    sprintf(command, "export currentlyInstalledVersion=%s; export calledCommand=%s; $(curl -s https://raw.githubusercontent.com/Sid-Sun/codeMKII/master/upgrade.script > /tmp/upgradeScript); bash /tmp/upgradeScript; rm -rf /tmp/upgradeScript",versionNumber,argv[0]);
+    sprintf(command, "export currentlyInstalledVersion=%s; export calledCommand=%s; $(curl -s https://git.strangebits.co.in/sid-sun/codeMKII/raw/branch/master/upgrade.script > /tmp/upgradeScript); bash /tmp/upgradeScript; rm -rf /tmp/upgradeScript",versionNumber,argv[0]);
     system(command);
     return 0;
 }
@@ -89,25 +90,30 @@ int decode(char *argv[]) {
 }
 
 int encode(char *argv[]) {
-    FILE *messageFile = fopen(argv[2], "r");
     char messageChar;
+    char message[strlen(argv[2])+1];
     int a = 7260703;
     long long int messageIndivisualEncoded;
     int passPhrase, SPP, tempASCII;
     int messageASCII;
     //Loop control variables
     int n = 0, i = 0;
-    if (messageFile == NULL) {
-        printf("Please give input File destination \n");
-        exit(0);
+    for (i=0;i<=strlen(argv[2]);i++){
+        message[i]=argv[2][i];
+        if (i == strlen(argv[2])){
+            message[i+1]='\0';
+        }
     }
+    i=0;
     //Call passPhrase calculation function
     passPhrase = passPhraseCalculate(argv);
     //Call function for calculations of SPP
     SPP = calculateSunPassPhrase(passPhrase);
     //Start Message calculations
-    messageChar = fgetc(messageFile);
-    while (messageChar != EOF) {
+    n = 0;
+    messageChar = message[n];
+    while (messageChar != '\0') {
+        printf("%c",messageChar);
         messageASCII = (int) messageChar;
         messageIndivisualEncoded = (long long int) ((a / passPhrase + messageASCII * SPP));
         tempASCII = messageIndivisualEncoded;
@@ -118,12 +124,9 @@ int encode(char *argv[]) {
         }
         writeOutput(messageIndivisualEncoded, i, argv);
         i = 1; //Reset i to 1
-        messageChar = fgetc(messageFile);
-        if (messageChar != EOF) { //I don't know why i wrote this but it works, i guess.. don't touch it!
-            n++;
-        }
+        n++;
+        messageChar = message[n];
     }
-    fclose(messageFile);
     return 0;
 }
 
