@@ -28,9 +28,12 @@ int upgrade(char *argv[],char versionNumber[]);
 //Functions
 int main(int argc, char *argv[]) {
     char version[]="v1.4.2";
+    printf("%c",argv[2][0]);
     if (argc >= 5) {
-//        printf("5 or less arg provided.");
+//        printf("%d",argc);
+        printf("5 or less arg provided.");
         if (!strcmp(argv[1], "-e") || !strcmp(argv[1], "--encode") || !strcmp(argv[1], "-encode")) {
+            printf("Calling encoder.");
             encode(argv);
         } else if (!strcmp(argv[1], "-d") || !strcmp(argv[1], "--decode") || !strcmp(argv[1], "-decode")) {
             decode(argv);
@@ -59,12 +62,16 @@ int upgrade(char *argv[],char versionNumber[]){
 }
 
 int decode(char *argv[]) {
+//    char codeChar;
+//    char codeMessage[strlen(argv[2])+1];
     FILE *inputCode = fopen(argv[2], "r");
     FILE *outputFile = fopen(argv[4], "a");
     int a = 7260703;
     char codeChar;
     int passPhrase, flag = 1, SPP, originalASCII;
     long long int codeToDecode;
+    int i;
+//    for(i=0;i<=strlen(argv[2]);i++)
     //Call function to calculate PassPhrase
     passPhrase = passPhraseCalculate(argv);
     //Call function to calculate sunPassPhrase
@@ -91,47 +98,73 @@ int decode(char *argv[]) {
 
 int encode(char *argv[]) {
     char messageChar;
+    FILE *messageFile;
     char message[strlen(argv[2])+1];
     int a = 7260703;
     long long int messageIndivisualEncoded;
-    int passPhrase, SPP, tempASCII;
+    int passPhrase, SPP, tempASCII,inlineIndicatorFlag=0;
     int messageASCII;
     //Loop control variables
     int n = 0, i = 0;
-    for (i=0;i<=strlen(argv[2]);i++){
-        message[i]=argv[2][i];
-        if (i == strlen(argv[2])){
-            message[i+1]='\0';
+    printf("Char: %c",argv[2][0]);
+    if (!strcmp(&argv[2][0], "z")){
+        printf("Inline char.");
+        for (i=1;i<=strlen(argv[2]);i++){
+            message[i]=argv[2][i];
+            if (i == strlen(argv[2])){
+                message[i+1]='\0';
+            }
         }
+        inlineIndicatorFlag = 1;
+        i=0;
+    } else {
+        messageFile = fopen(argv[2], "r");
     }
-    i=0;
     //Call passPhrase calculation function
     passPhrase = passPhraseCalculate(argv);
     //Call function for calculations of SPP
     SPP = calculateSunPassPhrase(passPhrase);
     //Start Message calculations
-    n = 0;
-    messageChar = message[n];
-    while (messageChar != '\0') {
-        printf("%c",messageChar);
-        messageASCII = (int) messageChar;
-        messageIndivisualEncoded = (long long int) ((a / passPhrase + messageASCII * SPP));
-        tempASCII = messageIndivisualEncoded;
-        i = 0;
-        while (tempASCII != 0) {
-            tempASCII = tempASCII / 10;
-            i++;
-        }
-        writeOutput(messageIndivisualEncoded, i, argv);
-        i = 1; //Reset i to 1
-        n++;
+    if (inlineIndicatorFlag==1) {
+        n = 0;
         messageChar = message[n];
+    } else {
+        messageChar = fgetc(messageFile);
+    }
+    while (messageChar != '\0') {
+//        printf("%c",messageChar);
+        if (messageChar != EOF) {
+            messageASCII = (int) messageChar;
+            messageIndivisualEncoded = (long long int) ((a / passPhrase + messageASCII * SPP));
+            tempASCII = messageIndivisualEncoded;
+            i = 0;
+            while (tempASCII != 0) {
+                tempASCII = tempASCII / 10;
+                i++;
+            }
+//            printf("calling write out\n");
+            writeOutput(messageIndivisualEncoded, i, argv);
+            i = 1; //Reset i to 1
+            if (inlineIndicatorFlag==1) {
+                n++;
+                messageChar = message[n];
+            } else {
+                messageChar = fgetc(messageFile);
+            }
+        } else {
+            break;
+        }
     }
     return 0;
 }
 
 int writeOutput(long long int encodedMessage, int encodedMessageLength, char *argv[]) {
-    FILE *outputFile = fopen(argv[4], "a");
+    FILE *outputFile;
+    if (!strcmp(argv[4], "stdout")){
+        outputFile = stdout;
+    } else {
+        outputFile = fopen(argv[4], "a");
+    }
     int encodedMessageDigitArray[encodedMessageLength], messageDigit, n = 1, i;
     while (encodedMessage != 0) {
         messageDigit = encodedMessage % 10;
@@ -143,7 +176,9 @@ int writeOutput(long long int encodedMessage, int encodedMessageLength, char *ar
         fprintf(outputFile, "%d", encodedMessageDigitArray[i]);
     }
     fprintf(outputFile, "%c", '-');
-    fclose(outputFile);
+    if (strcmp(argv[4], "stdout")){
+        fclose(outputFile);
+    }
     return 0;
 }
 
